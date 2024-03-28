@@ -1,146 +1,83 @@
-以太坊Solidity智能合约开发的样板
-
-## 安装
-
-```bash
-yarn
-```
-
-## 测试
-
-有3种测试方式: hardhat，dapptools和forge
-
-### hardhat
-
-- 使用hardhat进行测试，可以利用hardhat-deploy来重用部署过程和命名帐户：
-
-```bash
-yarn test
-```
-
-### [dapptools](https://dapp.tools)
-
-```bash
-dapp test
-```
-
-后者需要额外的步骤来设置您的机器：
-
-安装dapptools（请参考[这里](https://github.com/dapphub/dapptools#installation)的说明）：
-
-```bash
-# 用户必须在sudoers中
-curl -L https://nixos.org/nix/install | sh
-
-# 运行此命令或重新登录以使用Nix
-. "$HOME/.nix-profile/etc/profile.d/nix.sh"
-
-curl https://dapp.tools/install | sh
-```
-
-然后安装具有正确版本的solc：
-
-```bash
-nix-env -f https://github.com/dapphub/dapptools/archive/master.tar.gz -iA solc-static-versions.solc_0_8_9
-```
-
-### forge
-
-```bash
-forge test
-```
-
-这需要安装forge（请参考[foundry](https://github.com/gakonst/foundry)）
-
-## 脚本
-
-这里是您可以执行的npm脚本列表：
-
-其中一些依赖于[./\_scripts.js](./_scripts.js)，以允许通过命令行参数对其进行参数化（如果需要修改，请查看其中的内容）
-<br/><br/>
-
-### `yarn prepare`
-
-作为标准的生命周期npm脚本，在安装时会自动执行。它会生成配置文件和typechain，以让您可以开始进行类型安全的合约交互
-<br/><br/>
-
-### `yarn format` 和 `yarn format:fix`
-
-这些命令将检查代码的格式。`:fix`版本将修改文件以符合`.prettierrc.`中指定的要求
-<br/><br/>
-
-### `yarn compile`
-
-这些命令将编译您的合约
-<br/><br/>
-
-### `yarn void:deploy`
-
-这将在内存中的hardhat网络上部署您的合约，然后退出，不留痕迹。这是一种快速确保部署按预期工作且没有后果的方式
-<br/><br/>
-
-### `yarn test [mocha参数...]`
-
-这将使用mocha执行您的测试。您可以向mocha传递额外的参数
-<br/><br/>
-
-### `yarn coverage`
-
-这将在`coverage/`文件夹中生成覆盖率报告
-<br/><br/>
-
-### `yarn gas`
-
-这将为测试中使用的函数生成gas报告
-<br/><br/>
-
-### `yarn dev`
-
-这将在 `localhost:8545` 上运行一个本地的hardhat网络，并在其上部署您的合约。此外，它将监视任何更改并重新部署它们
-<br/><br/>
-
-### `yarn local:dev`
-
-这假设在 `localhost:8545` 上运行一个本地节点。它将在该节点上部署您的合约。此外，它将监视任何更改并重新部署它们
-<br/><br/>
-
-### `yarn execute <网络> <文件.ts> [参数...]`
-
-这将针对指定的网络执行脚本 `<文件.ts>`
-<br/><br/>
-
-### `yarn deploy <网络> [参数...]`
+## `yarn deploy <网络> [参数...]`
 
 这将在指定的网络上部署合约。
 
 在幕后它使用`hardhat deploy`命令，因此您可以附加任何参数
 <br/><br/>
 
-### `yarn export <网络> <文件.json>`
-
-这将将部署的合约的abi+地址导出到 `<文件.json>`
+`hardhat --network <网络> deploy --report-gas [参数...]`
 <br/><br/>
 
-### `yarn fork:execute <网络> [--blockNumber <块号>] [--deploy] <文件.ts> [参数...]`
+#### **选项**
+
+`--export <filepath>`: 导出一个包含当前网络上所有合约（地址、abi 和额外数据）的文件。该文件包含最少的信息，以避免使前端臃肿。
+
+`--export-all <filepath>`: 导出包含所有保存的部署中的所有合约的文件，无论当前调用的网络是哪个。
+
+`--tags <tags>`: 只执行带有给定标签（用逗号分隔）及其依赖项的部署脚本（有关标签和依赖项的更多信息，请参见[这里](#deploy-scripts-tags-and-dependencies)）
+
+`--gasprice <gasprice>`: 指定默认用于通过**hardhat-deploy**助手在部署脚本中执行的交易的 gas 价格（以 wei 为单位）
+
+`--write <boolean>`: 默认为 true（对于 hardhat 网络除外）。如果为 true，则将部署保存到磁盘上（在部署路径中，参见[路径配置](#extra-paths-config)）。
+
+#### **标志**
+
+`--reset`: 此标志从头开始重置部署。之前部署的合约不会被考虑，并从磁盘中删除。
+
+`--silent`: 此标志移除**hardhat-deploy**的日志输出（请查看[`hre.deployments`](#the-deployments-field)的日志函数和日志选项）
+
+`--watch`: 此标志使任务不断进行，监视部署脚本文件夹和合约源代码文件夹中的文件更改。如果发生任何更改，合约将被重新编译，部署脚本将被重新运行。与代理部署（[Proxies](#deploying-and-upgrading-proxies)或[Diamond](#builtin-in-support-for-diamonds-eip2535)）结合使用，可以实现 HCR（Hot Contract Replacement，热合约替换）功能。
+
+## `yarn local:dev`
+
+等于运行了这行命令
+`hardhat --network localhost deploy --watch`
+<br/><br/>
+
+这假设在 `localhost:8545` 上运行一个本地节点。它将在该节点上部署您的合约。此外，它将监视任何更改并重新部署它们
+<br/><br/>
+
+## `yarn dev`
+
+这将在 `localhost:8545` 上运行一个本地的 hardhat 网络，并在其上部署您的合约。--watch 开启了热部署, 任何合约上的改动都会实时生效. 此外，它将监视任何更改并重新部署它们
+<br/><br/>
+
+等于运行了这行命令
+`cross-env MINING_INTERVAL=\"3000,5000\" hardhat node --hostname 0.0.0.0 --watch`
+
+## `yarn execute <网络> <文件.ts> [参数...]`
+
+这将针对指定的网络执行脚本 `<文件.ts>`
+<br/><br/>
+
+`cross-env HARDHAT_DEPLOY_LOG=true HARDHAT_NETWORK=<网络> ts-node --files <文件.ts> [参数...]
+`
+
+## `yarn export <网络> <文件.json>`
+
+这将将部署的合约的 abi+地址导出到 `<文件.json>`
+<br/><br/>
+
+## `yarn fork:execute <网络> [--blockNumber <块号>] [--deploy] <文件.ts> [参数...]`
 
 这将针对指定网络的临时分叉执行脚本 `<文件.ts>`
 
 如果使用 `--deploy`，将执行部署脚本
 <br/><br/>
 
-### `yarn fork:deploy <网络> [--blockNumber <块号>] [参数...]`
+## `yarn fork:deploy <网络> [--blockNumber <块号>] [参数...]`
 
 这将针对指定网络的临时分叉部署合约。
 
 在幕后它使用`hardhat deploy`命令，因此您可以附加任何参数
 <br/><br/>
 
-### `yarn fork:test <网络> [--blockNumber <块号>] [mocha参数...]`
+## `yarn fork:test <网络> [--blockNumber <块号>] [mocha参数...]`
 
 这将针对指定网络的临时分叉测试合约
 <br/><br/>
 
-### `yarn fork:dev <网络> [--blockNumber <块号>] [参数...]`
+## `yarn fork:dev <网络> [--blockNumber <块号>] [参数...]`
 
 这将针对指定网络的分叉部署合约，并将其保持作为节点运行。
 
